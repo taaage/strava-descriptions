@@ -6,25 +6,36 @@ export async function GET(request: NextRequest) {
   const token = params.get('hub.verify_token');
   const challenge = params.get('hub.challenge');
 
+  console.log('[WEBHOOK] Verification request:', { mode, token, challenge });
+
   if (mode === 'subscribe' && token === process.env.STRAVA_VERIFY_TOKEN) {
+    console.log('[WEBHOOK] Verification successful');
     return NextResponse.json({ 'hub.challenge': challenge });
   }
+  console.log('[WEBHOOK] Verification failed');
   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 }
 
 export async function POST(request: NextRequest) {
   const event = await request.json();
+  console.log('[WEBHOOK] Received event:', JSON.stringify(event, null, 2));
 
   if (event.object_type === 'activity' && event.aspect_type === 'create') {
     const athleteId = event.owner_id;
     const activityId = event.object_id;
 
-    // Get athlete's access token from your database
+    console.log('[WEBHOOK] New activity created:', { athleteId, activityId });
+
     const accessToken = await getAthleteToken(athleteId);
     
     if (accessToken) {
+      console.log('[WEBHOOK] Access token found, updating activity...');
       await updateActivityDescription(activityId, accessToken);
+    } else {
+      console.log('[WEBHOOK] No access token found');
     }
+  } else {
+    console.log('[WEBHOOK] Ignoring event type:', event.object_type, event.aspect_type);
   }
 
   return NextResponse.json({ success: true });
@@ -35,13 +46,22 @@ async function getAthleteToken(athleteId: number): Promise<string | null> {
 }
 
 async function updateActivityDescription(activityId: number, accessToken: string) {
+  console.log('[UPDATE] Fetching activity:', activityId);
+  
   const activity = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
     headers: { Authorization: `Bearer ${accessToken}` }
   }).then(r => r.json());
 
-  const description = generateDescription(activity);
+  console.log('[UPDATE] Activity data:', { 
+    type: activity.type, 
+    distance: activity.distance, 
+    moving_time: activity.moving_time 
+  });
 
-  await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
+  const description = generateDescription(activity);
+  console.log('[UPDATE] Generated description:', description);
+
+  const response = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -49,6 +69,9 @@ async function updateActivityDescription(activityId: number, accessToken: string
     },
     body: JSON.stringify({ description })
   });
+
+  const result = await response.json();
+  console.log('[UPDATE] Update response:', response.status, result);
 }
 
 function generateDescription(activity: any): string {
