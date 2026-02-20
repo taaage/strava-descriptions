@@ -20,32 +20,37 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const event = await request.json();
-  console.log("[WEBHOOK] Received event:", JSON.stringify(event, null, 2));
+  try {
+    const event = await request.json();
+    console.log("[WEBHOOK] Received event:", JSON.stringify(event, null, 2));
 
-  if (event.object_type === "activity" && event.aspect_type === "create") {
-    const athleteId = event.owner_id;
-    const activityId = event.object_id;
+    if (event.object_type === "activity" && event.aspect_type === "create") {
+      const athleteId = event.owner_id;
+      const activityId = event.object_id;
 
-    console.log("[WEBHOOK] New activity created:", { athleteId, activityId });
+      console.log("[WEBHOOK] New activity created:", { athleteId, activityId });
 
-    const accessToken = await getAthleteToken(athleteId);
+      const accessToken = await getAthleteToken(athleteId);
 
-    if (accessToken) {
-      console.log("[WEBHOOK] Access token found, updating activity...");
-      await updateActivityDescription(activityId, accessToken);
+      if (accessToken) {
+        console.log("[WEBHOOK] Access token found, updating activity...");
+        await updateActivityDescription(activityId, accessToken);
+      } else {
+        console.log("[WEBHOOK] No access token found");
+      }
     } else {
-      console.log("[WEBHOOK] No access token found");
+      console.log(
+        "[WEBHOOK] Ignoring event type:",
+        event.object_type,
+        event.aspect_type,
+      );
     }
-  } else {
-    console.log(
-      "[WEBHOOK] Ignoring event type:",
-      event.object_type,
-      event.aspect_type,
-    );
-  }
 
-  return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("[WEBHOOK] Error:", error);
+    return NextResponse.json({ error: String(error) }, { status: 500 });
+  }
 }
 
 async function getAthleteToken(athleteId: number): Promise<string | null> {
@@ -75,38 +80,43 @@ async function updateActivityDescription(
   activityId: number,
   accessToken: string,
 ) {
-  console.log("[UPDATE] Fetching activity:", activityId);
+  try {
+    console.log("[UPDATE] Fetching activity:", activityId);
 
-  const activity = await fetch(
-    `https://www.strava.com/api/v3/activities/${activityId}`,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    },
-  ).then((r) => r.json());
-
-  console.log("[UPDATE] Activity data:", {
-    type: activity.type,
-    distance: activity.distance,
-    moving_time: activity.moving_time,
-  });
-
-  const description = generateDescription(activity);
-  console.log("[UPDATE] Generated description:", description);
-
-  const response = await fetch(
-    `https://www.strava.com/api/v3/activities/${activityId}`,
-    {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
+    const activity = await fetch(
+      `https://www.strava.com/api/v3/activities/${activityId}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
       },
-      body: JSON.stringify({ description }),
-    },
-  );
+    ).then((r) => r.json());
 
-  const result = await response.json();
-  console.log("[UPDATE] Update response:", response.status, result);
+    console.log("[UPDATE] Activity data:", {
+      type: activity.type,
+      distance: activity.distance,
+      moving_time: activity.moving_time,
+    });
+
+    const description = await generateDescription(activity);
+    console.log("[UPDATE] Generated description:", description);
+
+    const response = await fetch(
+      `https://www.strava.com/api/v3/activities/${activityId}`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ description }),
+      },
+    );
+
+    const result = await response.json();
+    console.log("[UPDATE] Update response:", response.status, result);
+  } catch (error) {
+    console.error("[UPDATE] Error:", error);
+    throw error;
+  }
 }
 
 async function generateDescription(activity: any): Promise<string> {
@@ -116,14 +126,12 @@ async function generateDescription(activity: any): Promise<string> {
     ? (1000 / 60 / activity.average_speed).toFixed(2)
     : "N/A";
 
-  const prompt = `Generate a short, sarcastic description for this Strava activity. Please roast me and use cycling wording properly. Add a empty row at the bottom with a link in the final row: https://strava-descriptions.vercel.app:
-- Type: ${activity.type}
-- Distance: ${distance}km
-- Duration: ${duration} minutes
-- Pace: ${pace} min/km
-- Elevation gain: ${activity.total_elevation_gain}m
-
-Keep it under 200 characters and make it motivational.`;
+  const prompt = `
+Generate a short, sarcastic description for this Strava activity. 
+Please roast me and use cycling wording properly. 
+Keep it under 200 characters.
+Add a empty row at the bottom with a link in the final row: https://strava-descriptions.vercel.app:
+`;
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
