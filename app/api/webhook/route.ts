@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
@@ -81,7 +81,14 @@ async function generateDescription(activity: any): Promise<string> {
     ? (1000 / 60 / activity.average_speed).toFixed(2)
     : "N/A";
 
-  const prompt = `Generate a short, sarcastic description for this Strava activity. Please roast me and use cycling wording properly. Add a empty row at the bottom with a link in the final row: https://strava-descriptions.vercel.app:
+  if (!process.env.GEMINI_API_KEY) {
+    return `${activity.type} - ${distance}km in ${duration} min\n\nhttps://strava-descriptions.vercel.app`;
+  }
+
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    
+    const prompt = `Generate a short, sarcastic description for this Strava activity. Please roast me and use cycling wording properly. Add a empty row at the bottom with a link in the final row: https://strava-descriptions.vercel.app:
 - Type: ${activity.type}
 - Distance: ${distance}km
 - Duration: ${duration} minutes
@@ -90,11 +97,9 @@ async function generateDescription(activity: any): Promise<string> {
 
 Keep it under 200 characters and make it motivational.`;
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: prompt }],
-    max_tokens: 100,
-  });
-
-  return completion.choices[0].message.content || `${activity.type} - ${distance}km`;
+    const result = await model.generateContent(prompt);
+    return result.response.text() || `${activity.type} - ${distance}km`;
+  } catch (error) {
+    return `${activity.type} - ${distance}km in ${duration} min\n\nhttps://strava-descriptions.vercel.app`;
+  }
 }
