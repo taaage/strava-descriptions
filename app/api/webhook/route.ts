@@ -77,11 +77,11 @@ async function createDescription(): Promise<string> {
       Generate a short, sarcastic description for this Strava activity. 
       Please roast me and use cycling wording properly. 
       Keep it under 200 characters and make it motivational.
-      Add a empty row at the bottom with a link in the final row: https://strava-descriptions.vercel.app`;
+      Add a empty row at the bottom with a link in the final row: https://roastmyride.vercel.app/`;
 
     const result = await model.generateContent(prompt);
     return result.response.text();
   } catch (error) {
-    return `something went wrong... \n\nhttps://strava-descriptions.vercel.app`;
+    return `something went wrong... \n\nhttps://roastmyride.vercel.app/`;
   }
 }
