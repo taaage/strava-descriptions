@@ -71,7 +71,7 @@ async function updateActivity(
 
 async function createDescription(): Promise<string> {
   try {
-    const model = ai.getGenerativeModel({ model: "gemini-3-flash-preview" });
+    const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
       Generate a short, sarcastic description for this Strava activity. 
@@ -82,6 +82,7 @@ async function createDescription(): Promise<string> {
     const result = await model.generateContent(prompt);
     return result.response.text();
   } catch (error) {
+    console.error("[AI ERROR]:", error);
     return `something went wrong... \n\nhttps://roastmyride.vercel.app/`;
   }
 }
