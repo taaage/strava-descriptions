@@ -84,7 +84,7 @@ async function createDescription(activity: any): Promise<string> {
   }
 
   try {
-    const model = ai.getGenerativeModel({ model: "gemini-pro" });
+    const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
     
     const prompt = `Generate a short, sarcastic description for this Strava activity. Please roast me and use cycling wording properly. Add a empty row at the bottom with a link in the final row: https://strava-descriptions.vercel.app:
 - Type: ${activity.type}
