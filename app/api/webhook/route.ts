@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { refreshAccessToken, updateActivityDescription } from "@/app/services/strava.service";
+import { refreshAccessToken, getActivity, updateActivityDescription } from "@/app/services/strava.service";
 import { generateDescription } from "@/app/services/ai.service";
 
 export async function GET(request: NextRequest) {
@@ -23,7 +23,8 @@ export async function POST(request: NextRequest) {
       const token = await refreshAccessToken();
 
       if (token) {
-        const description = await generateDescription();
+        const activity = await getActivity(activityId, token);
+        const description = await generateDescription(activity);
         await updateActivityDescription(activityId, token, description);
       }
     }

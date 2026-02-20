@@ -19,6 +19,13 @@ export async function refreshAccessToken(): Promise<string | null> {
   return data.access_token;
 }
 
+export async function getActivity(activityId: number, token: string) {
+  const response = await fetch(`${STRAVA_API_BASE}/activities/${activityId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.json();
+}
+
 export async function updateActivityDescription(
   activityId: number,
   token: string,
