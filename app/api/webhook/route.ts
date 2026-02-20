@@ -42,7 +42,26 @@ export async function POST(request: NextRequest) {
 }
 
 async function getAthleteToken(athleteId: number): Promise<string | null> {
-  return process.env.STRAVA_ACCESS_TOKEN || null;
+  const refreshToken = process.env.STRAVA_REFRESH_TOKEN;
+  if (!refreshToken) return null;
+
+  console.log('[TOKEN] Refreshing access token...');
+  
+  const response = await fetch('https://www.strava.com/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      client_id: process.env.STRAVA_CLIENT_ID,
+      client_secret: process.env.STRAVA_CLIENT_SECRET,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token'
+    })
+  });
+
+  const data = await response.json();
+  console.log('[TOKEN] New access token obtained');
+  
+  return data.access_token;
 }
 
 async function updateActivityDescription(activityId: number, accessToken: string) {
