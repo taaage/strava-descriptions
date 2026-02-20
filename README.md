@@ -2,6 +2,20 @@
 
 Automatically generate AI-powered descriptions for your Strava activities using webhooks.
 
+## Project Structure
+
+```
+app/
+├── api/
+│   └── webhook/
+│       └── route.ts          # Handles HTTP requests, calls services
+├── services/
+│   ├── strava.service.ts     # Strava API calls (token refresh, activity updates)
+│   └── ai.service.ts         # AI description generation
+└── config/
+    └── constants.ts          # Configuration values
+```
+
 ## Setup
 
 ### 1. Create Strava API Application
@@ -63,7 +77,9 @@ Upload a new activity to Strava and watch the AI-generated description appear!
 
 ## Customize
 
-Edit the prompt in `app/api/webhook/route.ts` to change the description style.
+Edit the prompt in `app/services/ai.service.ts` to change the description style.
+
+Update the app URL in `app/config/constants.ts`.
 
 ## Tech Stack
 
