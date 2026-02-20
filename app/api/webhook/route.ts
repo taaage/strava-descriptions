@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
@@ -21,10 +21,12 @@ export async function POST(request: NextRequest) {
 
     if (event.object_type === "activity" && event.aspect_type === "create") {
       const activityId = event.object_id;
-      const accessToken = await getAccessToken();
+      const token = await refreshStravaToken();
       
-      if (accessToken) {
-        await updateActivityDescription(activityId, accessToken);
+      if (token) {
+        const activity = await fetchActivity(activityId, token);
+        const description = await createDescription(activity);
+        await updateActivity(activityId, token, description);
       }
     }
 
@@ -34,7 +36,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function getAccessToken(): Promise<string | null> {
+async function refreshStravaToken(): Promise<string | null> {
   const refreshToken = process.env.STRAVA_REFRESH_TOKEN;
   if (!refreshToken) return null;
 
@@ -53,28 +55,24 @@ async function getAccessToken(): Promise<string | null> {
   return data.access_token;
 }
 
-async function updateActivityDescription(
-  activityId: number,
-  accessToken: string,
-) {
-  const activity = await fetch(
-    `https://www.strava.com/api/v3/activities/${activityId}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } },
-  ).then((r) => r.json());
+async function fetchActivity(activityId: number, token: string) {
+  return fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then((r) => r.json());
+}
 
-  const description = await generateDescription(activity);
-
+async function updateActivity(activityId: number, token: string, description: string) {
   await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
     method: "PUT",
     headers: {
-      Authorization: `Bearer ${accessToken}`,
+      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ description }),
   });
 }
 
-async function generateDescription(activity: any): Promise<string> {
+async function createDescription(activity: any): Promise<string> {
   const distance = (activity.distance / 1000).toFixed(2);
   const duration = Math.round(activity.moving_time / 60);
   const pace = activity.average_speed
@@ -86,7 +84,7 @@ async function generateDescription(activity: any): Promise<string> {
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = ai.getGenerativeModel({ model: "gemini-pro" });
     
     const prompt = `Generate a short, sarcastic description for this Strava activity. Please roast me and use cycling wording properly. Add a empty row at the bottom with a link in the final row: https://strava-descriptions.vercel.app:
 - Type: ${activity.type}
