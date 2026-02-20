@@ -22,10 +22,9 @@ export async function POST(request: NextRequest) {
     if (event.object_type === "activity" && event.aspect_type === "create") {
       const activityId = event.object_id;
       const token = await refreshStravaToken();
-      
+
       if (token) {
-        const activity = await fetchActivity(activityId, token);
-        const description = await createDescription(activity);
+        const description = await createDescription();
         await updateActivity(activityId, token, description);
       }
     }
@@ -55,13 +54,11 @@ async function refreshStravaToken(): Promise<string | null> {
   return data.access_token;
 }
 
-async function fetchActivity(activityId: number, token: string) {
-  return fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  }).then((r) => r.json());
-}
-
-async function updateActivity(activityId: number, token: string, description: string) {
+async function updateActivity(
+  activityId: number,
+  token: string,
+  description: string,
+) {
   await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
     method: "PUT",
     headers: {
@@ -72,32 +69,19 @@ async function updateActivity(activityId: number, token: string, description: st
   });
 }
 
-async function createDescription(activity: any): Promise<string> {
-  const distance = (activity.distance / 1000).toFixed(2);
-  const duration = Math.round(activity.moving_time / 60);
-  const pace = activity.average_speed
-    ? (1000 / 60 / activity.average_speed).toFixed(2)
-    : "N/A";
-
-  if (!process.env.GEMINI_API_KEY) {
-    return `${activity.type} - ${distance}km in ${duration} min\n\nhttps://strava-descriptions.vercel.app`;
-  }
-
+async function createDescription(): Promise<string> {
   try {
-    const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
-    
-    const prompt = `Generate a short, sarcastic description for this Strava activity. Please roast me and use cycling wording properly. Add a empty row at the bottom with a link in the final row: https://strava-descriptions.vercel.app:
-- Type: ${activity.type}
-- Distance: ${distance}km
-- Duration: ${duration} minutes
-- Pace: ${pace} min/km
-- Elevation gain: ${activity.total_elevation_gain}m
+    const model = ai.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
-Keep it under 200 characters and make it motivational.`;
+    const prompt = `
+      Generate a short, sarcastic description for this Strava activity. 
+      Please roast me and use cycling wording properly. 
+      Keep it under 200 characters and make it motivational.
+      Add a empty row at the bottom with a link in the final row: https://strava-descriptions.vercel.app`;
 
     const result = await model.generateContent(prompt);
-    return result.response.text() || `${activity.type} - ${distance}km`;
+    return result.response.text();
   } catch (error) {
-    return `${activity.type} - ${distance}km in ${duration} min\n\nhttps://strava-descriptions.vercel.app`;
+    return `something went wrong... \n\nhttps://strava-descriptions.vercel.app`;
   }
 }
