@@ -1,15 +1,9 @@
+import "./welcome.css";
+
 export default function Welcome() {
   return (
-    <div
-      style={{
-        maxWidth: "600px",
-        margin: "0 auto",
-        padding: "40px 20px",
-        fontFamily: "system-ui, sans-serif",
-        lineHeight: "1.6",
-      }}
-    >
-      <h1>🤖 Strava AI Descriptions</h1>
+    <div className="container">
+      <h1>🤖 Strava AI Descriptions <span className="author">by taaage</span></h1>
       <p>
         This app automatically generates AI-powered descriptions for your Strava
         activities using webhooks and Google Gemini.
@@ -32,14 +26,7 @@ export default function Welcome() {
       </ul>
 
       <p>
-        <a
-          href="https://github.com/taaage/strava-descriptions"
-          style={{
-            color: "#FC4C02",
-            textDecoration: "none",
-            fontWeight: "bold",
-          }}
-        >
+        <a href="https://github.com/taaage/strava-descriptions">
           View on GitHub →
         </a>
       </p>

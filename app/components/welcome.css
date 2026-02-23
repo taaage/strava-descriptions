@@ -1,0 +1,49 @@
+body {
+  background-color: #071630;
+  color: #cdd6e8;
+  margin: 0;
+}
+
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  font-family: system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+h1 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: #d1a2f9;
+}
+
+h2 {
+  font-size: 1.5rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: #64ffda;
+}
+
+p {
+  margin-bottom: 1rem;
+}
+
+ol, ul {
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+
+li {
+  margin-bottom: 0.5rem;
+}
+
+a {
+  color: #64ffda;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.author {
+  color: #64ffda;
+}
