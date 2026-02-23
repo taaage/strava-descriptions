@@ -8,8 +8,9 @@ export async function generateDescription(activity: any): Promise<string> {
     const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
-      Generate a short, roasty description for this Strava activity. Be savage and witty, but not mean.
-      Take activity details into account and make fun of the cyclist's performance.
+      Generate a short, motivational and performance oriented description.
+      Use cycling semantics and emojis to make it engaging. 
+      Keep it under 50 characters. 
       
       Activity details:
       - Type: ${activity.type}
